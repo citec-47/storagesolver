@@ -1,0 +1,11 @@
+import Link from 'next/link';
+import { Download } from 'lucide-react';
+import { prisma } from '@/lib/prisma';
+
+export default async function AdminInquiriesPage() {
+  let inquiries: { id: string; name: string; email: string; phone: string; status: string; createdAt: Date; deliveryZip: string | null }[] = [];
+  if (process.env.DATABASE_URL) {
+    try { inquiries = await prisma.inquiry.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, status: true, createdAt: true, deliveryZip: true } }); } catch (error) { console.error('Unable to load inquiries', error); }
+  }
+  return <><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Sales pipeline</p><h1 className="display-font mt-1 text-4xl font-bold uppercase">Inquiries</h1></div><a href="/api/admin/inquiries/export" className="inline-flex h-10 items-center gap-2 border border-black/15 bg-white px-4 text-xs font-bold"><Download size={15} />Export CSV</a></div><div className="mt-6 overflow-x-auto border border-black/10 bg-white"><table className="w-full min-w-[650px] text-left text-xs"><thead className="bg-[#e8ece8] uppercase text-muted"><tr>{['Customer', 'Phone', 'ZIP', 'Status', 'Received'].map((heading) => <th key={heading} className="px-4 py-3">{heading}</th>)}</tr></thead><tbody className="divide-y divide-black/5">{inquiries.map((inquiry) => <tr key={inquiry.id}><td className="px-4 py-3"><Link href={`/admin/inquiries/${inquiry.id}`} className="font-bold hover:text-signal">{inquiry.name}</Link><span className="mt-1 block text-muted">{inquiry.email}</span></td><td className="px-4 py-3">{inquiry.phone}</td><td className="px-4 py-3">{inquiry.deliveryZip ?? '—'}</td><td className="px-4 py-3">{inquiry.status}</td><td className="px-4 py-3">{inquiry.createdAt.toLocaleDateString()}</td></tr>)}</tbody></table>{!inquiries.length && <p className="p-8 text-center text-sm text-muted">No inquiries yet. Quote requests are stored when Neon is configured.</p>}</div></>;
+}

@@ -1,0 +1,12 @@
+import Link from 'next/link';
+import { ArrowUpRight, MapPin, Phone } from 'lucide-react';
+import { siteConfig, sizeOptions } from '@/lib/config';
+
+export function SiteFooter() {
+  return <footer className="bg-[#101a20] text-white"><div className="container-shell grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+    <div><Link href="/" className="display-font text-2xl font-bold uppercase">STORAGE SOLVERS<span className="text-signal">.</span></Link><p className="mt-3 max-w-xs text-sm leading-6 text-white/60">Dependable shipping containers and delivery, without the runaround.</p></div>
+    <div><h2 className="text-xs font-bold uppercase tracking-widest text-white/45">Inventory</h2><div className="mt-4 space-y-2">{sizeOptions.map((size) => <Link key={size.value} className="block text-sm text-white/75 hover:text-signal" href={`/containers/${size.slug}`}>{size.label} containers</Link>)}</div></div>
+    <div><h2 className="text-xs font-bold uppercase tracking-widest text-white/45">Company</h2><div className="mt-4 space-y-2">{[['Delivery', '/delivery'], ['About us', '/about'], ['FAQ', '/faq'], ['Contact', '/contact'], ['Privacy', '/privacy'], ['Terms', '/terms']].map(([label, href]) => <Link key={href} className="block text-sm text-white/75 hover:text-signal" href={href}>{label}</Link>)}</div></div>
+    <div><h2 className="text-xs font-bold uppercase tracking-widest text-white/45">Talk to our team</h2><a className="mt-4 flex items-center gap-2 text-sm" href={`tel:${siteConfig.phoneLink}`}><Phone size={15} className="text-signal" />{siteConfig.phone}</a><p className="mt-3 flex items-start gap-2 text-sm leading-6 text-white/65"><MapPin className="mt-1 shrink-0 text-signal" size={15} />{siteConfig.address}</p>{siteConfig.email && <a className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-signal" href={`mailto:${siteConfig.email}`}>{siteConfig.email}<ArrowUpRight size={14} /></a>}</div>
+  </div><div className="border-t border-white/10"><div className="container-shell flex flex-wrap justify-between gap-3 py-4 text-[11px] text-white/45"><span>© {new Date().getFullYear()} {siteConfig.name}</span><span>Container sales, made straightforward.</span></div></div></footer>;
+}

@@ -1,0 +1,17 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Minus, Plus, Trash2 } from 'lucide-react';
+import { demoProducts } from '@/lib/demo-data';
+import { formatPrice, imageUrl } from '@/lib/products';
+import { sizeLabels } from '@/lib/config';
+
+type Line = { slug: string; quantity: number };
+export default function CartPage() {
+  const [lines, setLines] = useState<Line[]>([]);
+  useEffect(() => { try { setLines((JSON.parse(localStorage.getItem('container-inquiry-cart') ?? '[]') as (string | Line)[]).map((item) => typeof item === 'string' ? { slug: item, quantity: 1 } : item)); } catch { setLines([]); } }, []);
+  function update(next: Line[]) { setLines(next); localStorage.setItem('container-inquiry-cart', JSON.stringify(next)); }
+  const products = lines.map((line) => ({ line, product: demoProducts.find((item) => item.slug === line.slug) })).filter((item) => item.product);
+  return <main className="container-shell min-h-[65vh] py-12"><p className="eyebrow">Your selection</p><h1 className="display-font mt-2 text-5xl font-bold uppercase">Inquiry list</h1><p className="mt-2 text-sm text-muted">Gather a few options and ask for one combined quote.</p>{products.length ? <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_300px]"><div className="space-y-3">{products.map(({ line, product }) => product && <article key={line.slug} className="flex gap-4 border border-black/10 bg-white p-4"><img src={imageUrl(product.images[0].publicId, 400)} alt={product.title} className="h-24 w-32 object-cover" /><div className="min-w-0 flex-1"><p className="eyebrow">{sizeLabels[product.size]}</p><h2 className="mt-1 font-bold">{product.title}</h2><p className="mt-1 text-sm font-semibold">{formatPrice(product.price)}</p><div className="mt-2 flex items-center gap-3"><button aria-label="Decrease quantity" onClick={() => update(lines.map((item) => item.slug === line.slug ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item))}><Minus size={15} /></button><span className="text-sm">{line.quantity}</span><button aria-label="Increase quantity" onClick={() => update(lines.map((item) => item.slug === line.slug ? { ...item, quantity: Math.min(100, item.quantity + 1) } : item))}><Plus size={15} /></button><button aria-label="Remove container" className="ml-auto text-muted hover:text-red-700" onClick={() => update(lines.filter((item) => item.slug !== line.slug))}><Trash2 size={16} /></button></div></div></article>)}</div><aside className="h-fit bg-ink p-6 text-white"><h2 className="display-font text-2xl font-bold uppercase">One combined request</h2><p className="mt-2 text-sm leading-6 text-white/65">We’ll confirm stock and price delivery for every selected container.</p><Link href={`/quote?items=${encodeURIComponent(lines.map((line) => `${line.slug}:${line.quantity}`).join(','))}`} onClick={() => { try { localStorage.setItem('container-inquiry-cart', JSON.stringify(lines)); } catch {} }} className="button-primary mt-6 w-full">Continue to quote <ArrowRight size={16} /></Link></aside></div> : <div className="mt-8 border border-black/10 bg-white p-10 text-center"><h2 className="display-font text-3xl font-bold uppercase">Your inquiry list is empty</h2><p className="mt-2 text-sm text-muted">Add containers from inventory to compare options.</p><Link className="button-primary mt-5" href="/containers">Browse inventory</Link></div>}</main>;
+}
