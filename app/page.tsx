@@ -9,13 +9,13 @@ export default async function HomePage() {
   const featuredSlugs = ['ft20-one-trip-standard', 'ft45-high-cube-one-trip', 'ft40-one-trip-standard'];
   const featured = featuredSlugs.map((slug) => products.find((product) => product.slug === slug)).filter((product) => product !== undefined);
   const featuredPhotos = [
-    { src: '/container-photos/featured-20ft.jpg', credit: 'IPLManagement · CC BY-SA 4.0', creditUrl: 'https://commons.wikimedia.org/wiki/File:20_Foot_Shipping_Container_Storage_Yard.jpg' },
-    { src: '/container-photos/featured-45ft.jpg', credit: 'IPLManagement · CC BY-SA 4.0', creditUrl: 'https://commons.wikimedia.org/wiki/File:45_High_Cube_Shipping_Container_at_Yard.jpg' },
-    { src: '/container-photos/featured-pair.jpg', credit: '1250metersdeep · CC0', creditUrl: 'https://commons.wikimedia.org/wiki/File:Blue_and_grey_shipping_containers.jpg' }
+    { src: '/local-container-photos/20ft-01.jpeg' },
+    { src: '/local-container-photos/45ft-01.jpeg' },
+    { src: '/local-container-photos/40ft-01.jpeg' }
   ];
   return <main>
     <section className="relative isolate min-h-[620px] overflow-hidden bg-ink text-white">
-      <div className="absolute inset-0 -z-10 bg-cover bg-center opacity-75" style={{ backgroundImage: "linear-gradient(90deg,rgba(11,20,25,.94) 0%,rgba(11,20,25,.72) 52%,rgba(11,20,25,.18) 100%),url('https://upload.wikimedia.org/wikipedia/commons/c/c0/Blue_and_grey_shipping_containers.jpg')" }} />
+      <div className="absolute inset-0 -z-10 bg-cover bg-center opacity-75" style={{ backgroundImage: "linear-gradient(90deg,rgba(11,20,25,.94) 0%,rgba(11,20,25,.72) 52%,rgba(11,20,25,.18) 100%),url('/local-container-photos/40ft-01.jpeg')" }} />
       <div className="container-shell flex min-h-[620px] items-center py-20">
         <div className="max-w-[660px] animate-rise">
           <p className="eyebrow mb-5">Built for work. Ready for yours.</p>
@@ -31,7 +31,7 @@ export default async function HomePage() {
     <section className="container-shell py-20">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Find your footprint</p><h2 className="display-font mt-2 text-4xl font-bold uppercase">Choose a size</h2></div><Link className="group inline-flex items-center gap-2 text-sm font-bold" href="/containers">View all inventory <ArrowRight className="transition group-hover:translate-x-1" size={16} /></Link></div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">{sizeOptions.map((option, index) => {
-        const sizePhotos = ['/container-photos/10ft.jpg', '/container-photos/featured-20ft.jpg', '/container-photos/40ft.jpg', '/container-photos/featured-45ft.jpg', '/container-photos/featured-pair.jpg'];
+        const sizePhotos = ['/local-container-photos/10ft-01.jpeg', '/local-container-photos/20ft-01.jpeg', '/local-container-photos/40ft-01.jpeg', '/local-container-photos/45ft-01.jpeg', '/local-container-photos/53ft-01.jpeg'];
         return <Link key={option.value} href={`/containers/${option.slug}`} className="group overflow-hidden border border-black/10 bg-white transition hover:-translate-y-1 hover:border-signal hover:shadow-soft"><img src={sizePhotos[index]} alt={`${option.label} shipping containers`} loading="lazy" className="h-36 w-full object-cover sm:h-40" /><div className="p-5"><span className="text-xs font-semibold text-muted">0{index + 1}</span><strong className="display-font mt-3 block text-4xl font-bold uppercase">{option.label}</strong><span className="mt-2 block text-xs text-muted">{option.use}</span><ArrowRight className="mt-5 text-signal transition group-hover:translate-x-1" size={17} /></div></Link>;
       })}</div>
     </section>
