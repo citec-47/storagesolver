@@ -19,7 +19,7 @@ The storefront has a demo inventory fallback when `DATABASE_URL` is unset, so th
 - **Neon:** Create a Postgres project. Use the pooled URL for `DATABASE_URL` and the direct URL for Prisma migrations in `DIRECT_URL`.
 - **Cloudinary:** Create a cloud, set `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Product uploads are signed by the server and stored below `containers/{slug}/`. Public catalog images use `f_auto,q_auto` URL transforms. Demo listings use a shared Unsplash placeholder until replaced with uploaded product photos.
 - **Auth.js:** Generate a long random `NEXTAUTH_SECRET`, set `NEXTAUTH_URL` to the site origin, and set `ADMIN_EMAIL` and `ADMIN_PASSWORD` before seeding. Never commit `.env`.
-- **Resend:** Set `RESEND_API_KEY` and `ADMIN_EMAIL`. Verify the sender domain and replace the default `quotes@` sender with a verified domain before production.
+- **Resend:** Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ADMIN_EMAIL` (the template uses `storangesolver@gmail.com`). Quote notifications are sent to both `ADMIN_EMAIL` and the public contact email when both are configured. Use `onboarding@resend.dev` for quick testing, then switch `RESEND_FROM_EMAIL` to a verified sender/domain for production.
 - **Company content:** Update `lib/config.ts` with the real company name, phone, email, address, and WhatsApp number. Have counsel review the Terms and Privacy templates.
 
 ## Useful commands

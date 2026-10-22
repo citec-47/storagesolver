@@ -52,20 +52,37 @@ export async function POST(request: Request) {
         deliveryZip: payload.deliveryZip || null, message: payload.message || null, items: inquiryItems
       } });
     }
-    if (process.env.RESEND_API_KEY && process.env.ADMIN_EMAIL) {
+    const notificationRecipients = [process.env.ADMIN_EMAIL, siteConfig.email]
+      .filter((email): email is string => Boolean(email));
+    let emailDelivered = false;
+    let emailStatusMessage: string | undefined;
+    if (!process.env.RESEND_API_KEY) {
+      emailStatusMessage = 'Quote saved, but email notifications are not configured (missing RESEND_API_KEY).';
+      console.error(emailStatusMessage);
+    } else if (!notificationRecipients.length) {
+      emailStatusMessage = 'Quote saved, but email notifications are not configured (no recipient email).';
+      console.error(emailStatusMessage);
+    } else {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
+        const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
         const itemLines = items.map((item) => `${item.quantity} × ${item.slug}`).join('\n');
         const notifications = await Promise.all([
-          resend.emails.send({ from: `${siteConfig.name} <quotes@${new URL(siteConfig.url).hostname}>`, to: process.env.ADMIN_EMAIL, subject: `New container quote request from ${payload.name}`, text: `${payload.name} · ${payload.email} · ${payload.phone}\n${itemLines}\n${payload.message ?? ''}` }),
-          resend.emails.send({ from: `${siteConfig.name} <quotes@${new URL(siteConfig.url).hostname}>`, to: payload.email, subject: 'We received your container quote request', text: `Hi ${payload.name},\n\nThanks for reaching out. Our team will review your request and follow up shortly.\n\n${siteConfig.name}` })
+          resend.emails.send({ from: fromAddress, to: notificationRecipients, subject: `New container quote request from ${payload.name}`, text: `${payload.name} · ${payload.email} · ${payload.phone}\n${itemLines}\n${payload.message ?? ''}` }),
+          resend.emails.send({ from: fromAddress, to: payload.email, subject: 'We received your container quote request', text: `Hi ${payload.name},\n\nThanks for reaching out. Our team will review your request and follow up shortly.\n\n${siteConfig.name}` })
         ]);
-        if (notifications.some((notification) => notification.error)) console.error('Quote saved, but one or more email notifications failed.', notifications.map((notification) => notification.error));
+        if (notifications.some((notification) => notification.error)) {
+          emailStatusMessage = 'Quote saved, but one or more email notifications failed.';
+          console.error(emailStatusMessage, notifications.map((notification) => notification.error));
+        } else {
+          emailDelivered = true;
+        }
       } catch (error) {
-        console.error('Quote saved, but email notifications failed.', error);
+        emailStatusMessage = 'Quote saved, but email delivery failed.';
+        console.error(emailStatusMessage, error);
       }
     }
-    return NextResponse.json({ success: true, demo: !process.env.DATABASE_URL });
+    return NextResponse.json({ success: true, demo: !process.env.DATABASE_URL, emailDelivered, emailStatusMessage });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: 'Please check the form fields and try again.' }, { status: 400 });
     console.error('Quote request failed', error);

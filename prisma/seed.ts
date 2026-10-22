@@ -4,11 +4,11 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 const sizeCatalog = [
-  { size: ContainerSize.FT10, basePrice: 2200, locations: ['Newark, NJ', 'Savannah, GA', 'Houston, TX', 'Miami, FL', 'Chicago, IL'] },
-  { size: ContainerSize.FT20, basePrice: 3200, locations: ['Newark, NJ', 'Houston, TX', 'Savannah, GA', 'Portland, OR', 'Dallas, TX'] },
-  { size: ContainerSize.FT40, basePrice: 4700, locations: ['Long Beach, CA', 'Chicago, IL', 'Dallas, TX', 'Houston, TX', 'Newark, NJ'] },
-  { size: ContainerSize.FT45, basePrice: 6100, locations: ['Savannah, GA', 'Newark, NJ', 'Seattle, WA', 'Phoenix, AZ', 'Denver, CO'] },
-  { size: ContainerSize.FT53, basePrice: 7600, locations: ['Los Angeles, CA', 'Dallas, TX', 'Houston, TX', 'Portland, OR', 'Seattle, WA'] }
+  { size: ContainerSize.FT10, price: 1000, locations: ['Newark, NJ', 'Savannah, GA', 'Houston, TX', 'Miami, FL', 'Chicago, IL'] },
+  { size: ContainerSize.FT20, price: 1500, locations: ['Newark, NJ', 'Houston, TX', 'Savannah, GA', 'Portland, OR', 'Dallas, TX'] },
+  { size: ContainerSize.FT40, price: 2000, locations: ['Long Beach, CA', 'Chicago, IL', 'Dallas, TX', 'Houston, TX', 'Newark, NJ'] },
+  { size: ContainerSize.FT45, price: 2500, locations: ['Savannah, GA', 'Newark, NJ', 'Seattle, WA', 'Phoenix, AZ', 'Denver, CO'] },
+  { size: ContainerSize.FT53, price: 3000, locations: ['Los Angeles, CA', 'Dallas, TX', 'Houston, TX', 'Portland, OR', 'Seattle, WA'] }
 ] as const;
 
 const templates = [
@@ -31,7 +31,7 @@ const templates = [
 
 const inventory = sizeCatalog.flatMap((sizeEntry, sizeIndex) => templates.map((template, templateIndex) => {
   const feet = Number(sizeEntry.size.replace('FT', ''));
-  const price = Math.round(sizeEntry.basePrice * template.baseMultiplier + (sizeIndex + 1) * 120 + templateIndex * 85);
+  const price = sizeEntry.price;
   const location = sizeEntry.locations[(sizeIndex + templateIndex) % sizeEntry.locations.length];
   const slug = `${sizeEntry.size.toLowerCase()}-${template.slug}`;
   const title = `${feet}ft ${template.title}`;

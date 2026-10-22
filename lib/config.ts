@@ -3,7 +3,7 @@ export const siteConfig = {
   description: 'Straightforward container sales, inspected inventory, and dependable delivery coast to coast.',
   phone: '+1 385-900-0827',
   phoneLink: '+13859000827',
-  email: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? '',
+  email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'storangesolver@gmail.com',
   address: '910 E 169TH STREET, WESTFIELD, IN 46074 USA',
   whatsapp: '13859000827',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'

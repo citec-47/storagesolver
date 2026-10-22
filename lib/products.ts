@@ -1,18 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { demoProducts, type CatalogProduct } from '@/lib/demo-data';
-import { containerPhotos } from '@/lib/container-photo-ids';
 
 const representativePhotos = {
-  twentyFoot: {
-    url: 'https://upload.wikimedia.org/wikipedia/commons/0/03/20_Foot_Shipping_Container_Storage_Yard.jpg',
-    credit: 'IPLManagement · CC BY-SA 4.0',
-    creditUrl: 'https://commons.wikimedia.org/wiki/File:20_Foot_Shipping_Container_Storage_Yard.jpg'
-  },
-  highCube: {
-    url: 'https://upload.wikimedia.org/wikipedia/commons/8/8d/45_High_Cube_Shipping_Container_at_Yard.jpg',
-    credit: 'IPLManagement · CC BY-SA 4.0',
-    creditUrl: 'https://commons.wikimedia.org/wiki/File:45_High_Cube_Shipping_Container_at_Yard.jpg'
-  },
   general: {
     url: 'https://upload.wikimedia.org/wikipedia/commons/c/c0/Blue_and_grey_shipping_containers.jpg',
     credit: '1250metersdeep · CC0',
@@ -20,44 +9,55 @@ const representativePhotos = {
   }
 } as const;
 
-const additionalCatalogSlugs = [
-  '10ft-one-trip-standard',
-  '10ft-used-cargo-worthy',
-  '20ft-one-trip-standard',
-  '20ft-used-watertight',
-  '40ft-high-cube-cargo-worthy',
-  '40ft-one-trip-standard',
-  '45ft-high-cube-one-trip',
-  '45ft-high-cube-used',
-  '53ft-high-cube-cargo-worthy',
-  '53ft-high-cube-one-trip'
-];
+const localFallbackBySize: Record<string, string[]> = {
+  FT10: Array.from({ length: 6 }, (_, index) => `/local-container-photos/10ft-${String(index + 1).padStart(2, '0')}.jpeg`),
+  FT20: Array.from({ length: 8 }, (_, index) => `/local-container-photos/20ft-${String(index + 1).padStart(2, '0')}.jpeg`),
+  FT40: Array.from({ length: 10 }, (_, index) => `/local-container-photos/40ft-${String(index + 1).padStart(2, '0')}.jpeg`),
+  FT45: Array.from({ length: 6 }, (_, index) => `/local-container-photos/45ft-${String(index + 1).padStart(2, '0')}.jpeg`),
+  FT53: Array.from({ length: 7 }, (_, index) => `/local-container-photos/53ft-${String(index + 1).padStart(2, '0')}.jpeg`)
+};
+
+const localFallbackPool = Object.values(localFallbackBySize).flat();
+
+function pickFallbackImage(size: string, globalOffset = 0): string {
+  const pool = localFallbackPool.length ? localFallbackPool : (localFallbackBySize[size] ?? []);
+  if (!pool.length) return representativePhotos.general.url;
+  return pool[globalOffset % pool.length];
+}
+
+function applyFallbackImage(product: CatalogProduct, fallbackSrc: string): CatalogProduct {
+  const primary = product.images[0];
+  const firstImage = {
+    id: primary?.id ?? `${product.id}-fallback-image`,
+    publicId: fallbackSrc,
+    alt: primary?.alt ?? `${product.title} shipping container`,
+    sortOrder: 0
+  };
+  const remainingImages = product.images.slice(1);
+  return { ...product, images: [firstImage, ...remainingImages] };
+}
 
 export function assignRepresentativeImages(products: CatalogProduct[]): CatalogProduct[] {
-  const stableIndices = new Map(demoProducts.map((product, index) => [product.slug, index]));
-  additionalCatalogSlugs.forEach((slug, index) => stableIndices.set(slug, demoProducts.length + index));
+  const seenPrimaryImageIds = new Map<string, number>();
+  return products.map((product, index) => {
+    const primary = product.images[0]?.publicId ?? '';
+    const isPlaceholder = !primary || primary.includes('placeholder') || /^commons-container-(\d+)$/.test(primary);
+    if (isPlaceholder) {
+      return applyFallbackImage(product, pickFallbackImage(product.size, index));
+    }
 
-  return products.map((product) => ({
-    ...product,
-    images: product.images.map((image) => {
-      if (!image.publicId.includes('placeholder')) return image;
-      const index = stableIndices.get(product.slug);
-      return index === undefined || index >= containerPhotos.length
-        ? image
-        : { ...image, publicId: `commons-container-${index}` };
-    })
-  }));
+    const duplicateCount = seenPrimaryImageIds.get(primary) ?? 0;
+    seenPrimaryImageIds.set(primary, duplicateCount + 1);
+    if (duplicateCount > 0) {
+      return applyFallbackImage(product, pickFallbackImage(product.size, index + duplicateCount));
+    }
+    return product;
+  });
 }
 
 export function imageCredit(publicId: string) {
   const photoMatch = /^commons-container-(\d+)$/.exec(publicId);
-  if (photoMatch) {
-    const photo = containerPhotos[Number(photoMatch[1])];
-    return photo ? {
-      credit: `${photo.artist} · ${photo.license}`,
-      creditUrl: photo.sourceUrl
-    } : undefined;
-  }
+  if (photoMatch) return undefined;
   if (publicId && !publicId.includes('placeholder')) return undefined;
   const { credit, creditUrl } = representativePhotos.general;
   return { credit, creditUrl };
@@ -105,10 +105,11 @@ export async function getProductBySlug(slug: string): Promise<CatalogProduct | u
 
 export function imageUrl(publicId: string, width = 900): string {
   const representativeMatch = /^commons-container-(\d+)$/.exec(publicId);
-  if (representativeMatch) return containerPhotos[Number(representativeMatch[1])]?.file ?? representativePhotos.general.url;
+  if (representativeMatch) return representativePhotos.general.url;
   if (!publicId) {
     return representativePhotos.general.url;
   }
+  if (publicId.startsWith('/')) return publicId;
 
   if (publicId.startsWith('http://') || publicId.startsWith('https://')) {
     const separator = publicId.includes('?') ? '&' : '?';
