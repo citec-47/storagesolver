@@ -22,6 +22,17 @@ The storefront has a demo inventory fallback when `DATABASE_URL` is unset, so th
 - **Resend:** Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ADMIN_EMAIL` (the template uses `storangesolver@gmail.com`). Quote notifications are sent to both `ADMIN_EMAIL` and the public contact email when both are configured. Use `onboarding@resend.dev` for quick testing, then switch `RESEND_FROM_EMAIL` to a verified sender/domain for production.
 - **Company content:** Update `lib/config.ts` with the real company name, phone, email, address, and WhatsApp number. Have counsel review the Terms and Privacy templates.
 
+For a Vercel production deployment, add these variables to the **Production** environment and redeploy:
+
+- `DATABASE_URL` and `DIRECT_URL` for the Neon project
+- `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` set to the public site URL
+- `NEXTAUTH_SECRET` set to a long random secret
+- `ADMIN_EMAIL=storangesolver@gmail.com` and a strong `ADMIN_PASSWORD`
+- `RESEND_API_KEY` and `RESEND_FROM_EMAIL` using a verified Resend sender/domain
+- `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
+
+After the schema is available, run `npx prisma db seed` once with the production variables to create or update the administrator account. The administrator can update and delete inquiries from `/admin/inquiries`.
+
 ## Useful commands
 
 - `npm run dev` - start local development
@@ -30,6 +41,8 @@ The storefront has a demo inventory fallback when `DATABASE_URL` is unset, so th
 - `npx prisma migrate dev` - apply local development migrations
 - `npx prisma db seed` - seed ten sample listings and the optional initial admin
 - `npx prisma studio` - inspect database records
+- `npm run db:cleanup-legacy-images` - preview legacy image records in Neon
+- `npm run db:cleanup-legacy-images -- --apply` - delete only legacy placeholder/Commons image records and matching Cloudinary assets
 
 ## Inventory API
 

@@ -10,3 +10,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try { const data = schema.parse(await request.json()); await prisma.inquiry.update({ where: { id: params.id }, data }); return NextResponse.json({ success: true }); }
   catch (error) { return NextResponse.json({ error: error instanceof z.ZodError ? error.flatten() : 'Could not update inquiry.' }, { status: 400 }); }
 }
+
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+  if (!await getServerSession(authOptions)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    await prisma.inquiry.delete({ where: { id: params.id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Could not delete inquiry', error);
+    return NextResponse.json({ error: 'Could not delete inquiry.' }, { status: 400 });
+  }
+}
