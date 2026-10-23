@@ -62,8 +62,10 @@ export async function POST(request: Request) {
         deliveryZip: payload.deliveryZip || null, message: payload.message || null, items: inquiryItems
       } });
     }
-    const adminRecipient = process.env.ADMIN_EMAIL || 'storangesolver@gmail.com';
-    const notificationRecipients = [adminRecipient];
+    const notificationRecipients = (process.env.ADMIN_QUOTE_EMAILS || 'info@storagesolversinc.com,storangesolver@gmail.com')
+      .split(',')
+      .map((email) => email.trim())
+      .filter(Boolean);
     let emailDelivered = false;
     let adminEmailDelivered = false;
     let customerEmailDelivered = false;
