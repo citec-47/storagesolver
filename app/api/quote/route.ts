@@ -65,6 +65,8 @@ export async function POST(request: Request) {
     const adminRecipient = process.env.ADMIN_EMAIL || 'storangesolver@gmail.com';
     const notificationRecipients = [adminRecipient];
     let emailDelivered = false;
+    let adminEmailDelivered = false;
+    let customerEmailDelivered = false;
     let emailStatusMessage: string | undefined;
     if (!process.env.MAIL_HOST || !process.env.MAIL_PORT || !process.env.MAIL_USER || !process.env.MAIL_PASSWORD || !process.env.MAIL_FROM_EMAIL) {
       emailStatusMessage = 'Quote saved, but email notifications are not configured (missing Hostinger SMTP settings).';
@@ -168,26 +170,44 @@ ${siteConfig.name} Team`;
           </div>
           <p style="margin:0;color:#46514c;line-height:1.6">If you need to add information, simply reply to this email.</p>
           <p style="margin:24px 0 0;font-weight:bold">Best regards,<br>${escapeHtml(siteConfig.name)} Team</p>`);
-        const [adminResult, customerResult] = await Promise.allSettled([
-          transporter.sendMail({ from: fromAddress, to: notificationRecipients, replyTo: payload.email, subject: `New container quote request from ${payload.name}`, text: adminMessage, html: adminHtml }),
+        const adminResult = await Promise.allSettled([
+          transporter.sendMail({
+            from: fromAddress,
+            to: notificationRecipients[0],
+            replyTo: payload.email,
+            subject: `[ADMIN] New container quote request from ${payload.name}`,
+            text: adminMessage,
+            html: adminHtml,
+            headers: {
+              'X-Quote-Notification': 'admin',
+              'X-Priority': '1'
+            }
+          })
+        ]);
+        adminEmailDelivered = adminResult[0].status === 'fulfilled';
+        if (!adminEmailDelivered) {
+          emailStatusMessage = 'Quote saved, but the admin notification could not be delivered.';
+          console.error(emailStatusMessage, adminResult[0].status === 'rejected' ? adminResult[0].reason : undefined);
+        }
+        const customerResult = await Promise.allSettled([
           transporter.sendMail({ from: fromAddress, to: payload.email, replyTo: notificationRecipients[0], subject: `We received your quote request - ${siteConfig.name}`, text: customerMessage, html: customerHtml })
         ]);
-        const failures = [adminResult, customerResult].filter(
-          (result): result is PromiseRejectedResult => result.status === 'rejected'
-        );
-        emailDelivered = customerResult.status === 'fulfilled';
-        if (failures.length) {
-          emailStatusMessage = customerResult.status === 'rejected'
-            ? 'Quote saved, but the customer confirmation email could not be delivered.'
-            : 'Quote saved and customer confirmation sent, but the admin notification could not be delivered.';
-          console.error(emailStatusMessage, failures.map((failure) => failure.reason));
+        customerEmailDelivered = customerResult[0].status === 'fulfilled';
+        emailDelivered = customerEmailDelivered;
+        if (!customerEmailDelivered) {
+          emailStatusMessage = adminEmailDelivered
+            ? 'Quote saved and admin notification sent, but the customer confirmation email could not be delivered.'
+            : 'Quote saved, but the admin notification and customer confirmation could not be delivered.';
+          console.error(emailStatusMessage, customerResult[0].status === 'rejected' ? customerResult[0].reason : undefined);
+        } else if (!adminEmailDelivered) {
+          emailStatusMessage = 'Quote saved and customer confirmation sent, but the admin notification could not be delivered.';
         }
       } catch (error) {
         emailStatusMessage = 'Quote saved, but email delivery failed.';
         console.error(emailStatusMessage, error);
       }
     }
-    return NextResponse.json({ success: true, demo: !process.env.DATABASE_URL, emailDelivered, emailStatusMessage });
+    return NextResponse.json({ success: true, demo: !process.env.DATABASE_URL, emailDelivered, adminEmailDelivered, customerEmailDelivered, emailStatusMessage });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: 'Please check the form fields and try again.' }, { status: 400 });
     console.error('Quote request failed', error);
