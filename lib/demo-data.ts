@@ -1,4 +1,5 @@
 import { conditionLabels, sizeLabels, typeLabels } from '@/lib/config';
+import { priceForContainerSize } from '@/lib/container-pricing';
 
 export type CatalogProduct = {
   id: string;
@@ -33,11 +34,11 @@ export type CatalogProduct = {
 };
 
 const sizeCatalog = [
-  { size: 'FT10', basePrice: 1000, locations: ['Newark, NJ', 'Savannah, GA', 'Houston, TX', 'Miami, FL', 'Chicago, IL'] },
-  { size: 'FT20', basePrice: 1500, locations: ['Newark, NJ', 'Houston, TX', 'Savannah, GA', 'Portland, OR', 'Dallas, TX'] },
-  { size: 'FT40', basePrice: 2000, locations: ['Long Beach, CA', 'Chicago, IL', 'Dallas, TX', 'Houston, TX', 'Newark, NJ'] },
-  { size: 'FT45', basePrice: 2500, locations: ['Savannah, GA', 'Newark, NJ', 'Seattle, WA', 'Phoenix, AZ', 'Denver, CO'] },
-  { size: 'FT53', basePrice: 3000, locations: ['Los Angeles, CA', 'Dallas, TX', 'Houston, TX', 'Portland, OR', 'Seattle, WA'] }
+  { size: 'FT10', locations: ['Newark, NJ', 'Savannah, GA', 'Houston, TX', 'Miami, FL', 'Chicago, IL'] },
+  { size: 'FT20', locations: ['Newark, NJ', 'Houston, TX', 'Savannah, GA', 'Portland, OR', 'Dallas, TX'] },
+  { size: 'FT40', locations: ['Long Beach, CA', 'Chicago, IL', 'Dallas, TX', 'Houston, TX', 'Newark, NJ'] },
+  { size: 'FT45', locations: ['Savannah, GA', 'Newark, NJ', 'Seattle, WA', 'Phoenix, AZ', 'Denver, CO'] },
+  { size: 'FT53', locations: ['Los Angeles, CA', 'Dallas, TX', 'Houston, TX', 'Portland, OR', 'Seattle, WA'] }
 ] as const;
 
 const templates = [
@@ -61,7 +62,7 @@ const templates = [
 export const demoProducts: CatalogProduct[] = sizeCatalog.flatMap((sizeEntry, sizeIndex) => templates.map((template, templateIndex) => {
   const feet = Number(sizeEntry.size.replace('FT', ''));
   const highCube = template.type === 'HIGH_CUBE';
-  const price = sizeEntry.basePrice;
+  const price = priceForContainerSize(sizeEntry.size, templateIndex, templates.length);
   const isFeatured = 'featured' in template && template.featured;
   const stockQuantity = Math.max(1, 2 + sizeIndex + templateIndex + (isFeatured ? 3 : 0));
   const location = sizeEntry.locations[(sizeIndex + templateIndex) % sizeEntry.locations.length];

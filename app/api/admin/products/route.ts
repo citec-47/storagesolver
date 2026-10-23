@@ -4,8 +4,13 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isPriceInContainerRange } from '@/lib/container-pricing';
 
-const schema = z.object({ slug: z.string().min(2).max(120).regex(/^[a-z0-9-]+$/), title: z.string().min(2).max(160), size: z.enum(['FT10', 'FT20', 'FT40', 'FT45', 'FT53']), type: z.enum(['STANDARD', 'HIGH_CUBE', 'OPEN_TOP', 'FLAT_RACK', 'REEFER', 'SIDE_DOOR', 'OFFICE_MODIFIED']), condition: z.enum(['NEW', 'ONE_TRIP', 'CARGO_WORTHY', 'WIND_WATER_TIGHT', 'AS_IS']), price: z.number().nonnegative(), stockQuantity: z.number().int().nonnegative(), location: z.string().min(2).max(120), description: z.string().min(5), status: z.enum(['ACTIVE', 'DRAFT', 'SOLD_OUT']).default('DRAFT'), images: z.array(z.string().min(1).max(255)).default([]) });
+const schema = z.object({ slug: z.string().min(2).max(120).regex(/^[a-z0-9-]+$/), title: z.string().min(2).max(160), size: z.enum(['FT10', 'FT20', 'FT40', 'FT45', 'FT53']), type: z.enum(['STANDARD', 'HIGH_CUBE', 'OPEN_TOP', 'FLAT_RACK', 'REEFER', 'SIDE_DOOR', 'OFFICE_MODIFIED']), condition: z.enum(['NEW', 'ONE_TRIP', 'CARGO_WORTHY', 'WIND_WATER_TIGHT', 'AS_IS']), price: z.number().nonnegative(), stockQuantity: z.number().int().nonnegative(), location: z.string().min(2).max(120), description: z.string().min(5), status: z.enum(['ACTIVE', 'DRAFT', 'SOLD_OUT']).default('DRAFT'), images: z.array(z.string().min(1).max(255)).default([]) }).superRefine((data, context) => {
+  if (!isPriceInContainerRange(data.size, data.price)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['price'], message: `Price must be within the ${data.size.replace('FT', '')}ft container range.` });
+  }
+});
 export async function POST(request: Request) {
   if (!await getServerSession(authOptions) || !process.env.DATABASE_URL) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {

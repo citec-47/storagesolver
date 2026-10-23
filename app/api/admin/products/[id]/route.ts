@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isPriceInContainerRange } from '@/lib/container-pricing';
 
 const schema = z.object({ status: z.enum(['ACTIVE', 'DRAFT', 'SOLD_OUT']).optional(), stockQuantity: z.number().int().nonnegative().optional(), price: z.number().nonnegative().optional(), title: z.string().min(2).max(160).optional(), location: z.string().max(120).optional(), description: z.string().min(5).optional(), slug: z.string().min(2).max(120).regex(/^[a-z0-9-]+$/).optional(), size: z.enum(['FT10', 'FT20', 'FT40', 'FT45', 'FT53']).optional(), type: z.enum(['STANDARD', 'HIGH_CUBE', 'OPEN_TOP', 'FLAT_RACK', 'REEFER', 'SIDE_DOOR', 'OFFICE_MODIFIED']).optional(), condition: z.enum(['NEW', 'ONE_TRIP', 'CARGO_WORTHY', 'WIND_WATER_TIGHT', 'AS_IS']).optional(), images: z.array(z.string().min(1).max(255)).optional() }).refine((data) => Object.keys(data).length > 0);
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -11,6 +12,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const data = schema.parse(await request.json());
     const { images, ...fields } = data;
+    if (fields.price !== undefined || fields.size !== undefined) {
+      const existing = await prisma.product.findUnique({ where: { id: params.id }, select: { size: true, price: true } });
+      const size = fields.size ?? existing?.size;
+      const price = fields.price ?? (existing ? Number(existing.price) : undefined);
+      if (!size || price === undefined || !isPriceInContainerRange(size, price)) {
+        return NextResponse.json({ error: 'Price must be within the selected container size range.' }, { status: 400 });
+      }
+    }
     if (images) {
       await prisma.$transaction([
         prisma.product.update({ where: { id: params.id }, data: fields }),

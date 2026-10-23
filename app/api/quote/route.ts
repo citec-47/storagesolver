@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { prisma } from '@/lib/prisma';
 import { siteConfig } from '@/lib/config';
 import { getProducts, imageUrl } from '@/lib/products';
@@ -56,27 +56,39 @@ export async function POST(request: Request) {
       .filter((email): email is string => Boolean(email));
     let emailDelivered = false;
     let emailStatusMessage: string | undefined;
-    if (!process.env.RESEND_API_KEY) {
-      emailStatusMessage = 'Quote saved, but email notifications are not configured (missing RESEND_API_KEY).';
+    if (!process.env.MAIL_HOST || !process.env.MAIL_PORT || !process.env.MAIL_USER || !process.env.MAIL_PASSWORD || !process.env.MAIL_FROM_EMAIL) {
+      emailStatusMessage = 'Quote saved, but email notifications are not configured (missing Hostinger SMTP settings).';
       console.error(emailStatusMessage);
     } else if (!notificationRecipients.length) {
       emailStatusMessage = 'Quote saved, but email notifications are not configured (no recipient email).';
       console.error(emailStatusMessage);
     } else {
       try {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-        const itemLines = items.map((item) => `${item.quantity} × ${item.slug}`).join('\n');
-        const notifications = await Promise.all([
-          resend.emails.send({ from: fromAddress, to: notificationRecipients, subject: `New container quote request from ${payload.name}`, text: `${payload.name} · ${payload.email} · ${payload.phone}\n${itemLines}\n${payload.message ?? ''}` }),
-          resend.emails.send({ from: fromAddress, to: payload.email, subject: 'We received your container quote request', text: `Hi ${payload.name},\n\nThanks for reaching out. Our team will review your request and follow up shortly.\n\n${siteConfig.name}` })
-        ]);
-        if (notifications.some((notification) => notification.error)) {
-          emailStatusMessage = 'Quote saved, but one or more email notifications failed.';
-          console.error(emailStatusMessage, notifications.map((notification) => notification.error));
-        } else {
-          emailDelivered = true;
+        const mailPort = Number(process.env.MAIL_PORT);
+        if (!Number.isInteger(mailPort) || mailPort <= 0) {
+          throw new Error('MAIL_PORT must be a valid positive integer.');
         }
+        const transporter = nodemailer.createTransport({
+          host: process.env.MAIL_HOST,
+          port: mailPort,
+          secure: process.env.MAIL_SECURE !== 'false',
+          auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASSWORD }
+        });
+        const fromAddress = process.env.MAIL_FROM_EMAIL;
+        const itemLines = items.map((item) => `${item.quantity} × ${item.slug}`).join('\n');
+        const customerMessage = `Hi ${payload.name},
+
+Thank you for requesting a container quote from ${siteConfig.name}.
+
+Our team has received your request and will review the details. An administrator will get back to you shortly with availability, delivery information, and pricing.
+
+Best regards,
+${siteConfig.name} Team`;
+        await Promise.all([
+          transporter.sendMail({ from: fromAddress, to: notificationRecipients, replyTo: payload.email, subject: `New container quote request from ${payload.name}`, text: `${payload.name} · ${payload.email} · ${payload.phone}\n${itemLines}\n${payload.message ?? ''}` }),
+          transporter.sendMail({ from: fromAddress, to: payload.email, subject: `We received your quote request - ${siteConfig.name}`, text: customerMessage })
+        ]);
+        emailDelivered = true;
       } catch (error) {
         emailStatusMessage = 'Quote saved, but email delivery failed.';
         console.error(emailStatusMessage, error);
