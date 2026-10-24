@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowUpRight, MapPin } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import type { CatalogProduct } from '@/lib/demo-data';
 import { conditionLabels, sizeLabels, typeLabels } from '@/lib/config';
 import { formatPrice, imageUrl } from '@/lib/products';
@@ -15,7 +15,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
       </Link>
     </div>
     <div className="p-5"><div className="flex items-start justify-between gap-3"><div><p className="eyebrow">{sizeLabels[product.size]} · {typeLabels[product.type]}</p><Link href={`/containers/${product.slug}`} className="mt-1 block font-bold leading-5 hover:text-signal">{product.title}</Link></div><Link href={`/containers/${product.slug}`} aria-label={`View ${product.title}`} className="grid h-9 w-9 shrink-0 place-items-center border border-black/10 text-signal transition hover:bg-signal hover:text-white"><ArrowUpRight size={17} /></Link></div>
-      <p className="mt-3 flex items-center gap-1 text-xs text-muted"><MapPin size={13} />{product.location}</p><div className="mt-4 flex items-end justify-between border-t border-black/10 pt-4"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Price</span><strong className="display-font text-2xl font-bold">{formatPrice(product.price)}</strong></div>
+      <div className="mt-4 flex items-end justify-between border-t border-black/10 pt-4"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Price</span><strong className="display-font text-2xl font-bold">{formatPrice(product.price)}</strong></div>
     </div>
   </article>;
 }
