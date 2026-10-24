@@ -1,11 +1,11 @@
 import { priceForContainerSize } from './container-pricing';
 
 export const containerPhotoGroups = [
-  { size: 'FT10', feet: 10, folder: '10ft containers', count: 6 },
-  { size: 'FT20', feet: 20, folder: '20ft containers', count: 8 },
-  { size: 'FT40', feet: 40, folder: '40ft containers', count: 10 },
-  { size: 'FT45', feet: 45, folder: '45ft containers', count: 6 },
-  { size: 'FT53', feet: 53, folder: '53ft containers', count: 7 }
+  { size: 'FT10', feet: 10, folder: '10ft containers', count: 15 },
+  { size: 'FT20', feet: 20, folder: '20ft containers', count: 18 },
+  { size: 'FT40', feet: 40, folder: '40ft containers', count: 18 },
+  { size: 'FT45', feet: 45, folder: '45ft containers', count: 19 },
+  { size: 'FT53', feet: 53, folder: '53ft containers', count: 20 }
 ] as const;
 
 export function buildContainerInventory() {

@@ -39,9 +39,9 @@ After the schema is available, run `npx prisma db seed` with the intended enviro
 - `npm run typecheck` - TypeScript validation
 - `npm run build` - generate Prisma client and build for production
 - `npx prisma migrate dev` - apply local development migrations
-- `npx prisma db seed` - seed 37 listings from the local container photo set and the optional initial admin
+- `npx prisma db seed` - seed listings from the local container photo set and the optional initial admin
 - `npm run db:replace-inventory` - preview the database target and inventory counts without writing data
-- `npm run db:replace-inventory -- --apply --confirm-target=<DIRECT_URL_HOST>` - replace all products and associated database image records with the 37 listings from `containers/`; requires explicit hostname confirmation and is disabled when `NODE_ENV=production`
+- `npm run db:replace-inventory -- --apply --confirm-target=<DIRECT_URL_HOST>` - replace all products and associated database image records with listings from `New containers/`; requires explicit hostname confirmation and is disabled when `NODE_ENV=production`
 - `npx prisma studio` - inspect database records
 - `npm run db:cleanup-legacy-images` - preview legacy image records in Neon
 - `npm run db:cleanup-legacy-images -- --apply` - delete only legacy placeholder/Commons image records and matching Cloudinary assets

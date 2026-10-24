@@ -29,7 +29,7 @@ function getDatabaseTarget() {
 async function copyContainerPhotos() {
   const copies: { source: string; destination: string }[] = [];
   for (const group of containerPhotoGroups) {
-    const sourceDirectory = path.join(root, 'containers', group.folder);
+    const sourceDirectory = path.join(root, 'New containers', group.folder);
     const photoNames = (await readdir(sourceDirectory, { withFileTypes: true }))
       .filter((entry) => entry.isFile() && /\.jpe?g$/i.test(entry.name))
       .map((entry) => entry.name)
@@ -67,7 +67,7 @@ async function main() {
   console.log(`Database target: ${target.database}@${target.host}`);
   console.log(`Current rows: ${existingProducts} products, ${existingImages} product images.`);
   console.log(`Replacement: ${inventory.length} listings and ${inventory.length} local photos.`);
-  console.log('Admin users, inquiries, inquiry items, and local image files outside these 37 paths are retained.');
+  console.log('Admin users, inquiries, and inquiry items are retained.');
 
   if (!apply) {
     console.log(`Dry run only. To apply, pass --apply --confirm-target=${target.host}`);
@@ -150,7 +150,7 @@ async function main() {
     counts[product.size] = (counts[product.size] ?? 0) + 1;
     return counts;
   }, {});
-  console.log(`Replacement complete and verified: ${JSON.stringify(countsBySize)}.`);
+  console.log(`New container inventory imported and verified: ${JSON.stringify(countsBySize)}.`);
 }
 
 main()

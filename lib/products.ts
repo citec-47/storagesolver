@@ -11,17 +11,15 @@ const representativePhotos = {
 } as const;
 
 const localFallbackBySize: Record<string, string[]> = {
-  FT10: Array.from({ length: 6 }, (_, index) => `/local-container-photos/10ft-${String(index + 1).padStart(2, '0')}.jpeg`),
-  FT20: Array.from({ length: 8 }, (_, index) => `/local-container-photos/20ft-${String(index + 1).padStart(2, '0')}.jpeg`),
-  FT40: Array.from({ length: 10 }, (_, index) => `/local-container-photos/40ft-${String(index + 1).padStart(2, '0')}.jpeg`),
-  FT45: Array.from({ length: 6 }, (_, index) => `/local-container-photos/45ft-${String(index + 1).padStart(2, '0')}.jpeg`),
-  FT53: Array.from({ length: 7 }, (_, index) => `/local-container-photos/53ft-${String(index + 1).padStart(2, '0')}.jpeg`)
+  FT10: Array.from({ length: 15 }, (_, index) => `/local-container-photos/10ft-${String(index + 1).padStart(2, '0')}.jpeg`),
+  FT20: Array.from({ length: 18 }, (_, index) => `/local-container-photos/20ft-${String(index + 1).padStart(2, '0')}.jpeg`),
+  FT40: Array.from({ length: 18 }, (_, index) => `/local-container-photos/40ft-${String(index + 1).padStart(2, '0')}.jpeg`),
+  FT45: Array.from({ length: 19 }, (_, index) => `/local-container-photos/45ft-${String(index + 1).padStart(2, '0')}.jpeg`),
+  FT53: Array.from({ length: 20 }, (_, index) => `/local-container-photos/53ft-${String(index + 1).padStart(2, '0')}.jpeg`)
 };
 
-const localFallbackPool = Object.values(localFallbackBySize).flat();
-
 function pickFallbackImage(size: string, globalOffset = 0): string {
-  const pool = localFallbackPool.length ? localFallbackPool : (localFallbackBySize[size] ?? []);
+  const pool = localFallbackBySize[size] ?? [];
   if (!pool.length) return representativePhotos.general.url;
   return pool[globalOffset % pool.length];
 }
@@ -42,8 +40,15 @@ export function assignRepresentativeImages(products: CatalogProduct[]): CatalogP
   const seenPrimaryImageIds = new Map<string, number>();
   return products.map((product, index) => {
     const primary = product.images[0]?.publicId ?? '';
+    const localImage = /^\/local-container-photos\/(\d+)ft-(\d+)\.jpeg$/.exec(primary);
+    const localImageIndex = localImage ? Number(localImage[2]) : 0;
+    const localImageCount = localFallbackBySize[product.size]?.length ?? 0;
+    const isWrongSizeImage = Boolean(localImage && (
+      localImage[1] !== product.size.replace('FT', '')
+      || localImageIndex > localImageCount
+    ));
     const isPlaceholder = !primary || primary.includes('placeholder') || /^commons-container-(\d+)$/.test(primary);
-    if (isPlaceholder) {
+    if (isPlaceholder || isWrongSizeImage) {
       return applyFallbackImage(product, pickFallbackImage(product.size, index));
     }
 
