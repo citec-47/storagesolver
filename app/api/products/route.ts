@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import type { CatalogProduct } from '@/lib/demo-data';
 import { assignRepresentativeImages, getDemoProducts, imageCredit, imageUrl } from '@/lib/products';
+import { priceForContainerSize } from '@/lib/container-pricing';
 
 const querySchema = z.object({
   size: z.nativeEnum(ContainerSize).optional(),
@@ -43,14 +44,13 @@ export async function GET(request: Request) {
         ...(conditionFilters.length ? { AND: conditionFilters } : {}),
         ...(filters.location ? { location: { contains: filters.location, mode: 'insensitive' } } : {}),
         ...(filters.q ? { OR: [{ title: { contains: filters.q, mode: 'insensitive' } }, { description: { contains: filters.q, mode: 'insensitive' } }, { location: { contains: filters.q, mode: 'insensitive' } }] } : {}),
-        ...((filters.minPrice !== undefined || filters.maxPrice !== undefined) ? { price: { ...(filters.minPrice !== undefined ? { gte: filters.minPrice } : {}), ...(filters.maxPrice !== undefined ? { lte: filters.maxPrice } : {}) } } : {})
       };
-      const records = await prisma.product.findMany({ where, include: { images: { orderBy: { sortOrder: 'asc' } } }, orderBy: filters.sort === 'price-asc' ? { price: 'asc' } : filters.sort === 'price-desc' ? { price: 'desc' } : { createdAt: 'desc' } });
+      const records = await prisma.product.findMany({ where, include: { images: { orderBy: { sortOrder: 'asc' } } }, orderBy: { createdAt: 'desc' } });
       products = assignRepresentativeImages(records.map((product) => ({
         ...product,
         grade: product.grade ?? '',
-        price: Number(product.price),
-        salePrice: product.salePrice ? Number(product.salePrice) : undefined,
+        price: priceForContainerSize(product.size),
+        salePrice: undefined,
         internalLength: product.internalLength ?? '', internalWidth: product.internalWidth ?? '', internalHeight: product.internalHeight ?? '',
         externalLength: product.externalLength ?? '', externalWidth: product.externalWidth ?? '', externalHeight: product.externalHeight ?? '',
         doorOpeningWidth: product.doorOpeningWidth ?? '', doorOpeningHeight: product.doorOpeningHeight ?? '',
@@ -76,6 +76,13 @@ export async function GET(request: Request) {
     if (filters.sort === 'price-asc') products.sort((a, b) => a.price - b.price);
     if (filters.sort === 'price-desc') products.sort((a, b) => b.price - a.price);
     if (filters.sort === 'newest') products.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  } else {
+    products = products.filter((product) =>
+      (filters.minPrice === undefined || product.price >= filters.minPrice) &&
+      (filters.maxPrice === undefined || product.price <= filters.maxPrice)
+    );
+    if (filters.sort === 'price-asc') products.sort((a, b) => a.price - b.price);
+    if (filters.sort === 'price-desc') products.sort((a, b) => b.price - a.price);
   }
 
   const total = products.length;

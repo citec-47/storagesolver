@@ -17,7 +17,7 @@ The storefront has a demo inventory fallback when `DATABASE_URL` is unset, so th
 ## Services and environment
 
 - **Neon:** Create a Postgres project. Use the pooled URL for `DATABASE_URL` and the direct URL for Prisma migrations in `DIRECT_URL`.
-- **Cloudinary:** Create a cloud, set `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Product uploads are signed by the server and stored below `containers/{slug}/`. Public catalog images use `f_auto,q_auto` URL transforms. Demo listings use a shared Unsplash placeholder until replaced with uploaded product photos.
+- **Cloudinary:** Create a cloud, set `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. Product uploads are signed by the server and stored below `containers/{slug}/`. Public catalog images use `f_auto,q_auto` URL transforms. Seed and demo listings use the local photos in `containers/` and `public/local-container-photos/`.
 - **Auth.js:** Generate a long random `NEXTAUTH_SECRET`, set `NEXTAUTH_URL` to the site origin, and set `ADMIN_EMAIL` and `ADMIN_PASSWORD` before seeding. Never commit `.env`.
 - **Hostinger SMTP:** Create a Hostinger mailbox and set `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, and `MAIL_FROM_EMAIL`. Quote notifications are sent to every address in the comma-separated `ADMIN_QUOTE_EMAILS` setting.
 - **Company content:** Update `lib/config.ts` with the real company name, phone, email, address, and WhatsApp number. Have counsel review the Terms and Privacy templates.
@@ -31,7 +31,7 @@ For a Vercel production deployment, add these variables to the **Production** en
 - `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, and `MAIL_FROM_EMAIL` for the Hostinger mailbox
 - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
 
-After the schema is available, run `npx prisma db seed` once with the production variables to create or update the administrator account. The administrator can update and delete inquiries from `/admin/inquiries`.
+After the schema is available, run `npx prisma db seed` with the intended environment variables to create or update the administrator account and seed the 37 size-folder listings. Never point inventory replacement commands at production. The administrator can update and delete inquiries from `/admin/inquiries`.
 
 ## Useful commands
 
@@ -39,14 +39,16 @@ After the schema is available, run `npx prisma db seed` once with the production
 - `npm run typecheck` - TypeScript validation
 - `npm run build` - generate Prisma client and build for production
 - `npx prisma migrate dev` - apply local development migrations
-- `npx prisma db seed` - seed ten sample listings and the optional initial admin
+- `npx prisma db seed` - seed 37 listings from the local container photo set and the optional initial admin
+- `npm run db:replace-inventory` - preview the database target and inventory counts without writing data
+- `npm run db:replace-inventory -- --apply --confirm-target=<DIRECT_URL_HOST>` - replace all products and associated database image records with the 37 listings from `containers/`; requires explicit hostname confirmation and is disabled when `NODE_ENV=production`
 - `npx prisma studio` - inspect database records
 - `npm run db:cleanup-legacy-images` - preview legacy image records in Neon
 - `npm run db:cleanup-legacy-images -- --apply` - delete only legacy placeholder/Commons image records and matching Cloudinary assets
 
 ## Inventory API
 
-`GET /api/products` returns active inventory. Optional query parameters: `size` (`FT10`, `FT20`, `FT40`, `FT45`, `FT53`), `type`, `condition`, `availability` (`new`, `used`, `all`), `location`, `q`, `minPrice`, `maxPrice`, `sort` (`newest`, `price-asc`, `price-desc`), `page`, and `limit`. Example: `/api/products?size=FT40&availability=used&sort=price-asc`. New includes New and One-Trip. Used includes Cargo Worthy, Wind & Water Tight, and As-Is.
+`GET /api/products` returns active inventory. Container prices are fixed at $1,000 (10ft), $1,500 (20ft), $2,000 (40ft), $2,500 (45ft), and $3,000 (53ft); all products of a size use the same price. Optional query parameters: `size` (`FT10`, `FT20`, `FT40`, `FT45`, `FT53`), `type`, `condition`, `availability` (`new`, `used`, `all`), `location`, `q`, `minPrice`, `maxPrice`, `sort` (`newest`, `price-asc`, `price-desc`), `page`, and `limit`. Example: `/api/products?size=FT40&availability=used&sort=price-asc`. New includes New and One-Trip. Used includes Cargo Worthy, Wind & Water Tight, and As-Is.
 
 ## Deployment to Vercel
 
@@ -56,4 +58,4 @@ Import the repository in Vercel, set production environment variables, and deplo
 
 Public inventory supports URL-backed search, filters, sorting, pagination, size landing pages, product specs, and Product JSON-LD. Product admin mutations revalidate inventory, detail pages, and sitemap. Quotes support validation, honeypot, an in-process rate limit, optional database persistence, and Resend notifications. The inquiry list stores chosen items in browser local storage. Admin supports credentials login, dashboard counts, product create/edit/quick price-stock-status updates/duplication/deletion, signed Cloudinary uploads, inquiry status/notes, and CSV export. Payment checkout is intentionally not enabled; quote requests are the purchase-intent flow.
 
-Before launch, replace sample prices, sample depot inventory, placeholder photos/testimonial, company details, legal copy, and demo content. Confirm delivery coverage and pricing, add production monitoring and durable distributed rate limiting, and have privacy/security policies reviewed.
+Before launch, confirm delivery coverage and supplied size-based pricing, company details, legal copy, and demo content. Add production monitoring and durable distributed rate limiting, and have privacy/security policies reviewed.

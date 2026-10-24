@@ -6,13 +6,8 @@ import { ProductCard } from '@/components/product-card';
 
 export default async function HomePage() {
   const products = await getProducts();
-  const featuredSlugs = ['ft20-one-trip-standard', 'ft45-high-cube-one-trip', 'ft40-one-trip-standard'];
-  const featured = featuredSlugs.map((slug) => products.find((product) => product.slug === slug)).filter((product) => product !== undefined);
-  const featuredPhotos = [
-    { src: '/local-container-photos/20ft-01.jpeg' },
-    { src: '/local-container-photos/45ft-01.jpeg' },
-    { src: '/local-container-photos/40ft-01.jpeg' }
-  ];
+  const highlightedProducts = products.filter((product) => product.featured);
+  const featured = (highlightedProducts.length ? highlightedProducts : products).slice(0, 3);
   return <main>
     <section className="relative isolate min-h-[620px] overflow-hidden bg-ink text-white">
       <div className="absolute inset-0 -z-10 bg-cover bg-center opacity-75" style={{ backgroundImage: "linear-gradient(90deg,rgba(11,20,25,.94) 0%,rgba(11,20,25,.72) 52%,rgba(11,20,25,.18) 100%),url('/local-container-photos/40ft-01.jpeg')" }} />
@@ -36,7 +31,7 @@ export default async function HomePage() {
       })}</div>
     </section>
 
-    <section className="bg-white py-20"><div className="container-shell"><div className="mb-8 flex items-end justify-between gap-4"><div><p className="eyebrow">Available now</p><h2 className="display-font mt-2 text-4xl font-bold uppercase">Featured inventory</h2></div><Link className="hidden text-sm font-bold sm:block" href="/containers">All containers <ArrowRight className="ml-1 inline" size={16} /></Link></div><div className="grid gap-5 md:grid-cols-3">{featured.map((product, index) => <ProductCard key={product.id} product={product} featuredPhoto={featuredPhotos[index]} />)}</div></div></section>
+    {featured.length > 0 && <section className="bg-white py-20"><div className="container-shell"><div className="mb-8 flex items-end justify-between gap-4"><div><p className="eyebrow">Available now</p><h2 className="display-font mt-2 text-4xl font-bold uppercase">Featured inventory</h2></div><Link className="hidden text-sm font-bold sm:block" href="/containers">All containers <ArrowRight className="ml-1 inline" size={16} /></Link></div><div className="grid gap-5 md:grid-cols-3">{featured.map((product) => <ProductCard key={product.id} product={product} />)}</div></div></section>}
 
     <section className="container-shell grid gap-12 py-20 lg:grid-cols-[.8fr_1.2fr]"><div><p className="eyebrow">Why STORAGE SOLVERS</p><h2 className="display-font mt-2 text-5xl font-bold uppercase leading-[.94]">Good steel.<br />No surprises.</h2><p className="mt-5 max-w-sm text-sm leading-6 text-muted">A container is a long-term tool. We make the purchase clear, the condition honest, and delivery predictable.</p><Link className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-signal" href="/about">Meet our team <ArrowRight size={16} /></Link></div><div className="grid gap-7 sm:grid-cols-3">{[{ icon: BadgeCheck, title: 'Inspected inventory', text: 'Clear condition grading and photos before you commit.' }, { icon: Truck, title: 'Delivery handled', text: 'Experienced drivers and placement planning at your site.' }, { icon: Clock3, title: 'Straight answers', text: 'A real person helps you compare options and timing.' }].map(({ icon: Icon, title, text }) => <article key={title} className="border-t-2 border-signal pt-5"><Icon className="text-signal" size={22} /><h3 className="mt-4 font-bold">{title}</h3><p className="mt-2 text-sm leading-6 text-muted">{text}</p></article>)}</div></section>
 

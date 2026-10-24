@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:replace-inventory": "tsx scripts/replace-container-inventory.ts",
     "db:studio": "prisma studio",
     "db:cleanup-legacy-images": "tsx scripts/cleanup-legacy-images.ts"
   },
