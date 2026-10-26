@@ -24,7 +24,7 @@ export function QuoteForm({ productSlug, initialSize }: { productSlug?: string; 
       const items = productSlug ? [{ slug: productSlug, quantity: values.quantity }] : cartItems;
       const response = await fetch('/api/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...values, items }) });
       const result = await response.json() as { success?: boolean; error?: string; emailStatusMessage?: string };
-      if (!response.ok) throw new Error(result.error ?? 'Submission failed.');
+      if (!response.ok) throw new Error([result.error, result.emailStatusMessage].filter(Boolean).join(' ') || 'Submission failed.');
       try { localStorage.removeItem('container-inquiry-cart'); } catch { /* storage may be unavailable */ }
       if (result.emailStatusMessage) setServerNotice(result.emailStatusMessage);
       setSubmitted(true);

@@ -8,6 +8,18 @@
 			"isBackground": true,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Check local Neon connection",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"prisma",
+				"migrate",
+				"status"
+			],
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }

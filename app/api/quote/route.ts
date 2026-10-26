@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import nodemailer from 'nodemailer';
 import { prisma } from '@/lib/prisma';
-import { siteConfig } from '@/lib/config';
+import { siteConfig, sizeLabels } from '@/lib/config';
 import { getProducts, imageUrl } from '@/lib/products';
 
 function escapeHtml(value: string): string {
@@ -48,19 +48,34 @@ export async function POST(request: Request) {
     const productBySlug = new Map(products.map((product) => [product.slug, product]));
     const inquiryItems = items.map((item) => {
       const product = productBySlug.get(item.slug);
-      return product ? {
-        ...item,
-        title: product.title,
-        imageUrl: imageUrl(product.images[0]?.publicId ?? '', 900),
-        productUrl: `/containers/${product.slug}`
-      } : item;
+      if (product) {
+        return {
+          ...item,
+          title: product.title,
+          imageUrl: imageUrl(product.images[0]?.publicId ?? '', 900),
+          productUrl: `/containers/${product.slug}`
+        };
+      }
+      const sizeLabel = sizeLabels[item.slug];
+      return sizeLabel
+        ? { ...item, title: `${sizeLabel} containers`, productUrl: `/containers?size=${encodeURIComponent(item.slug)}` }
+        : item;
     });
+    let databaseSaved = false;
+    let databaseStatusMessage = 'Quote could not be saved to the database.';
     if (process.env.DATABASE_URL) {
-      await prisma.inquiry.create({ data: {
-        name: payload.name, email: payload.email, phone: payload.phone,
-        company: payload.company || null, deliveryAddress: payload.deliveryAddress || null,
-        deliveryZip: payload.deliveryZip || null, message: payload.message || null, items: inquiryItems
-      } });
+      try {
+        await prisma.inquiry.create({ data: {
+          name: payload.name, email: payload.email, phone: payload.phone,
+          company: payload.company || null, deliveryAddress: payload.deliveryAddress || null,
+          deliveryZip: payload.deliveryZip || null, message: payload.message || null, items: inquiryItems
+        } });
+        databaseSaved = true;
+      } catch (error) {
+        console.error('Quote request database save failed', error);
+      }
+    } else {
+      databaseStatusMessage = 'Database is not configured.';
     }
     const notificationRecipients = (process.env.ADMIN_QUOTE_EMAILS || 'info@storagesolversinc.com,storangesolver@gmail.com')
       .split(',')
@@ -71,10 +86,10 @@ export async function POST(request: Request) {
     let customerEmailDelivered = false;
     let emailStatusMessage: string | undefined;
     if (!process.env.MAIL_HOST || !process.env.MAIL_PORT || !process.env.MAIL_USER || !process.env.MAIL_PASSWORD || !process.env.MAIL_FROM_EMAIL) {
-      emailStatusMessage = 'Quote saved, but email notifications are not configured (missing Hostinger SMTP settings).';
+      emailStatusMessage = 'Email notifications are not configured (missing Hostinger SMTP settings).';
       console.error(emailStatusMessage);
     } else if (!notificationRecipients.length) {
-      emailStatusMessage = 'Quote saved, but email notifications are not configured (no recipient email).';
+      emailStatusMessage = 'Email notifications are not configured (no recipient email).';
       console.error(emailStatusMessage);
     } else {
       try {
@@ -93,7 +108,28 @@ export async function POST(request: Request) {
           auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASSWORD }
         });
         const fromAddress = process.env.MAIL_FROM_EMAIL;
-        const itemLines = items.map((item) => `${item.quantity} × ${item.slug}`).join('\n');
+        const configuredSiteUrl = new URL(siteConfig.url);
+        const emailSiteUrl = ['localhost', '127.0.0.1'].includes(configuredSiteUrl.hostname)
+          ? 'https://www.storagesolversinc.com'
+          : siteConfig.url;
+        const adminItems = inquiryItems.map((item) => ({
+          quantity: item.quantity,
+          title: 'title' in item && item.title ? item.title : item.slug,
+          productUrl: 'productUrl' in item && item.productUrl
+            ? new URL(item.productUrl, emailSiteUrl).toString()
+            : undefined
+        }));
+        const itemLines = adminItems.map((item) =>
+          `${item.quantity} × ${item.title}${item.productUrl ? `\n   View container: ${item.productUrl}` : ''}`
+        ).join('\n');
+        const adminItemsHtml = adminItems.map((item) => `
+          <li style="margin:8px 0">
+            <strong>${item.quantity} ×</strong>
+            ${item.productUrl
+              ? `<a href="${escapeHtml(item.productUrl)}" style="color:#526b20;font-weight:bold">${escapeHtml(item.title)}</a>`
+              : escapeHtml(item.title)}
+            ${item.productUrl ? `<br><a href="${escapeHtml(item.productUrl)}" style="color:#526b20;font-size:12px">View container listing</a>` : ''}
+          </li>`).join('');
         const adminMessage = `New container quote request
 
 Customer: ${payload.name}
@@ -128,7 +164,6 @@ ${siteConfig.name} Team`;
           size: escapeHtml(payload.size || 'Not specified'),
           condition: escapeHtml(payload.condition || 'Not specified'),
           message: escapeHtml(payload.message || 'Not provided'),
-          items: escapeHtml(itemLines).replace(/\n/g, '<br>')
         };
         const emailShell = (content: string) => `
           <div style="margin:0;background:#f4f5f3;padding:32px 16px;font-family:Arial,sans-serif;color:#18201d">
@@ -157,7 +192,7 @@ ${siteConfig.name} Team`;
             <tr><td style="padding:10px 0;color:#68736e">Condition</td><td style="padding:10px 0">${safe.condition}</td></tr>
           </table>
           <div style="margin-top:22px;padding:16px;background:#f4f5f3;border-left:4px solid #b7d46a">
-            <strong>Requested items</strong><br><span style="line-height:1.8">${safe.items}</span>
+            <strong>Requested items</strong><ul style="line-height:1.8;margin:8px 0 0;padding-left:20px">${adminItemsHtml}</ul>
           </div>
           <div style="margin-top:16px;padding:16px;background:#f8f9f8">
             <strong>Customer message</strong><p style="margin:8px 0 0;white-space:pre-wrap">${safe.message}</p>
@@ -205,11 +240,25 @@ ${siteConfig.name} Team`;
           emailStatusMessage = 'Quote saved and customer confirmation sent, but the admin notification could not be delivered.';
         }
       } catch (error) {
-        emailStatusMessage = 'Quote saved, but email delivery failed.';
+        emailStatusMessage = 'Email delivery failed.';
         console.error(emailStatusMessage, error);
       }
     }
-    return NextResponse.json({ success: true, demo: !process.env.DATABASE_URL, emailDelivered, adminEmailDelivered, customerEmailDelivered, emailStatusMessage });
+    if (!databaseSaved && !adminEmailDelivered) {
+      const deliveryStatus = emailStatusMessage
+        ? ` ${emailStatusMessage}`
+        : ' Admin email notification was not sent.';
+      return NextResponse.json({
+        error: 'We could not save or deliver your quote request. Please call our team.',
+        emailStatusMessage: `${databaseStatusMessage}${deliveryStatus}`
+      }, { status: 503 });
+    }
+    if (!databaseSaved && adminEmailDelivered) {
+      emailStatusMessage = customerEmailDelivered
+        ? 'Your request was emailed to our team, but could not be saved to our database.'
+        : 'Your request was emailed to our team, but could not be saved to our database or confirmed by email.';
+    }
+    return NextResponse.json({ success: true, demo: !process.env.DATABASE_URL, databaseSaved, emailDelivered, adminEmailDelivered, customerEmailDelivered, emailStatusMessage });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: 'Please check the form fields and try again.' }, { status: 400 });
     console.error('Quote request failed', error);
