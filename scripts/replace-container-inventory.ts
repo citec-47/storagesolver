@@ -35,17 +35,21 @@ async function copyContainerPhotos() {
       .map((entry) => entry.name)
       .sort((left, right) => left.localeCompare(right, 'en', { numeric: true }));
 
-    if (photoNames.length !== group.count) {
-      throw new Error(`${group.folder} contains ${photoNames.length} JPEGs; expected ${group.count}. No database changes were made.`);
+    if (photoNames.length !== group.sourceCount) {
+      throw new Error(`${group.folder} contains ${photoNames.length} JPEGs; expected ${group.sourceCount}. No database changes were made.`);
     }
 
-    photoNames.forEach((photoName, index) => {
-      const number = String(index + 1).padStart(2, '0');
+    for (const photoNumber of group.photoNumbers) {
+      const photoName = photoNames.find((name) => new RegExp(`^c${photoNumber}\\.jpe?g$`, 'i').test(name));
+      if (!photoName) {
+        throw new Error(`${group.folder} is missing source photo c${photoNumber}. No database changes were made.`);
+      }
+      const number = String(photoNumber).padStart(2, '0');
       copies.push({
         source: path.join(sourceDirectory, photoName),
         destination: path.join(root, 'public', 'local-container-photos', `${group.feet}ft-${number}.jpeg`)
       });
-    });
+    }
   }
 
   await mkdir(path.join(root, 'public', 'local-container-photos'), { recursive: true });
@@ -101,13 +105,15 @@ async function main() {
       updatedAt: now
     };
   });
-  const images: Prisma.ProductImageCreateManyInput[] = records.map(({ container, id: productId }) => ({
-    id: randomUUID(),
-    productId,
-    publicId: container.imagePath,
-    alt: container.title,
-    sortOrder: 0
-  }));
+  const images: Prisma.ProductImageCreateManyInput[] = records.flatMap(({ container, id: productId }) =>
+    container.imagePaths.map((publicId, sortOrder) => ({
+      id: randomUUID(),
+      productId,
+      publicId,
+      alt: container.title,
+      sortOrder
+    }))
+  );
 
   await prisma.$transaction([
     prisma.product.deleteMany(),
@@ -139,8 +145,8 @@ async function main() {
       || product.size !== expected.size
       || Number(product.price) !== expected.price
       || product.location !== expected.location
-      || product.images.length !== 1
-      || product.images[0].publicId !== expected.imagePath
+      || product.images.length !== expected.imagePaths.length
+      || product.images.some((image, index) => image.publicId !== expected.imagePaths[index])
     ) {
       throw new Error(`Post-import verification found an unexpected listing: ${product.slug}.`);
     }

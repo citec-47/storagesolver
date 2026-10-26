@@ -1,14 +1,16 @@
 import { PrismaClient, ProductStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { buildContainerInventory } from '../lib/container-inventory';
+import { buildContainerInventory, retiredContainerSlugs } from '../lib/container-inventory';
 
 const prisma = new PrismaClient();
 
 const inventory = buildContainerInventory();
 
 async function main() {
+  await prisma.product.deleteMany({ where: { slug: { in: retiredContainerSlugs } } });
+
   for (const item of inventory) {
-    const { imagePath, ...productData } = item;
+    const { imagePaths, ...productData } = item;
     await prisma.product.upsert({
       where: { slug: productData.slug },
       update: {
@@ -31,18 +33,14 @@ async function main() {
         features: [],
         images: {
           deleteMany: {},
-          create: [{ publicId: imagePath, alt: productData.title, sortOrder: 0 }]
+          create: imagePaths.map((publicId, sortOrder) => ({ publicId, alt: productData.title, sortOrder }))
         }
       },
       create: {
         ...productData,
         status: ProductStatus.ACTIVE,
         images: {
-          create: [{
-            publicId: imagePath,
-            alt: productData.title,
-            sortOrder: 0
-          }]
+          create: imagePaths.map((publicId, sortOrder) => ({ publicId, alt: productData.title, sortOrder }))
         }
       }
     });

@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import type { CatalogProduct } from '@/lib/demo-data';
 import { assignRepresentativeImages, getDemoProducts, imageCredit, imageUrl } from '@/lib/products';
-import { priceForContainerSize } from '@/lib/container-pricing';
 
 const querySchema = z.object({
   size: z.nativeEnum(ContainerSize).optional(),
@@ -49,7 +48,7 @@ export async function GET(request: Request) {
       products = assignRepresentativeImages(records.map((product) => ({
         ...product,
         grade: product.grade ?? '',
-        price: priceForContainerSize(product.size),
+        price: Number(product.price),
         salePrice: undefined,
         internalLength: product.internalLength ?? '', internalWidth: product.internalWidth ?? '', internalHeight: product.internalHeight ?? '',
         externalLength: product.externalLength ?? '', externalWidth: product.externalWidth ?? '', externalHeight: product.externalHeight ?? '',

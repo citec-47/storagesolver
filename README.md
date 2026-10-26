@@ -31,7 +31,7 @@ For a Vercel production deployment, add these variables to the **Production** en
 - `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, and `MAIL_FROM_EMAIL` for the Hostinger mailbox
 - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
 
-After the schema is available, run `npx prisma db seed` with the intended environment variables to create or update the administrator account and seed the 37 size-folder listings. Never point inventory replacement commands at production. The administrator can update and delete inquiries from `/admin/inquiries`.
+After the schema is available, run `npx prisma db seed` with the intended environment variables to create or update the administrator account and seed the listings from `New containers/`. The 10ft Container 06 image is excluded; 20ft images 01, 06, 07, 10, 11, 12, 13, 15, and 18 are excluded; 40ft Containers 05, 06, and 07 and 53ft Containers 10, 11, and 14 are retired. Feedback photos in `public/local-container-photos/` are assigned to the 10ft Roll Up Doors listing and the four specialized 20ft door listings: Both End Opening Doors ($1,700), All Side Opening Doors ($1,800), Side Double Roll Up Doors ($1,700), and Roll Up Doors ($1,600). Never point inventory replacement commands at production. The administrator can update and delete inquiries from `/admin/inquiries`.
 
 ## Useful commands
 
@@ -48,7 +48,7 @@ After the schema is available, run `npx prisma db seed` with the intended enviro
 
 ## Inventory API
 
-`GET /api/products` returns active inventory. Container prices are fixed at $1,000 (10ft), $1,500 (20ft), $2,000 (40ft), $2,500 (45ft), and $3,000 (53ft); all products of a size use the same price. Optional query parameters: `size` (`FT10`, `FT20`, `FT40`, `FT45`, `FT53`), `type`, `condition`, `availability` (`new`, `used`, `all`), `location`, `q`, `minPrice`, `maxPrice`, `sort` (`newest`, `price-asc`, `price-desc`), `page`, and `limit`. Example: `/api/products?size=FT40&availability=used&sort=price-asc`. New includes New and One-Trip. Used includes Cargo Worthy, Wind & Water Tight, and As-Is.
+`GET /api/products` returns active inventory using each product's saved price. The default listing prices are $1,000 (10ft), $1,500 (20ft), $2,000 (40ft), $2,500 (45ft), and $3,000 (53ft); specific 20ft door listings use the prices documented above. Optional query parameters: `size` (`FT10`, `FT20`, `FT40`, `FT45`, `FT53`), `type`, `condition`, `availability` (`new`, `used`, `all`), `location`, `q`, `minPrice`, `maxPrice`, `sort` (`newest`, `price-asc`, `price-desc`), `page`, and `limit`. Example: `/api/products?size=FT40&availability=used&sort=price-asc`. New includes New and One-Trip. Used includes Cargo Worthy, Wind & Water Tight, and As-Is.
 
 ## Deployment to Vercel
 

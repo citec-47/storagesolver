@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma';
 import { demoProducts, type CatalogProduct } from '@/lib/demo-data';
-import { priceForContainerSize, type ContainerSize } from '@/lib/container-pricing';
 
 const representativePhotos = {
   general: {
@@ -82,7 +81,7 @@ export async function getProducts(): Promise<CatalogProduct[]> {
     const catalog = products.map((product) => ({
       ...product,
       grade: product.grade ?? '—',
-      price: priceForContainerSize(product.size as ContainerSize),
+      price: Number(product.price),
       salePrice: undefined,
       internalLength: product.internalLength ?? '',
       internalWidth: product.internalWidth ?? '',

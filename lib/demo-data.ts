@@ -1,6 +1,5 @@
 import { conditionLabels, sizeLabels, typeLabels } from '@/lib/config';
 import { buildContainerInventory } from '@/lib/container-inventory';
-import { priceForContainerSize } from '@/lib/container-pricing';
 
 export type CatalogProduct = {
   id: string;
@@ -42,7 +41,7 @@ export const demoProducts: CatalogProduct[] = buildContainerInventory().map((con
   type: container.type,
   condition: container.condition,
   grade: '',
-  price: priceForContainerSize(container.size),
+  price: container.price,
   stockQuantity: container.stockQuantity,
   location: container.location,
   featured: container.featured,
@@ -61,7 +60,12 @@ export const demoProducts: CatalogProduct[] = buildContainerInventory().map((con
   cubicCapacity: '',
   color: '',
   features: [],
-  images: [{ id: `image-${container.slug}`, publicId: container.imagePath, alt: container.title, sortOrder: 0 }],
+  images: container.imagePaths.map((publicId, sortOrder) => ({
+    id: `image-${container.slug}-${sortOrder}`,
+    publicId,
+    alt: container.title,
+    sortOrder
+  })),
   createdAt: new Date(Date.now() - index * 86400000)
 }));
 
