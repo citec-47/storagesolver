@@ -71,9 +71,7 @@ export function buildContainerInventory() {
         const number = String(photoNumber).padStart(2, '0');
         const doorListing = size === 'FT20' ? twentyFootDoorListings[photoNumber] : undefined;
         const title = doorListing?.title
-          ?? (size === 'FT20' && photoNumber === 9
-            ? 'Standard 20ft Shipping Container 09'
-            : `${feet}ft Shipping Container ${number}`);
+          ?? `${feet}ft Shipping Container`;
         return {
           slug: doorListing?.slug ?? `${size.toLowerCase()}-container-${number}`,
           title,
