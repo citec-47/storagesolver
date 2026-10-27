@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     const product = schema.parse(await request.json());
     const { images, ...data } = product;
     const created = await prisma.product.create({ data: { ...data, images: { create: images.map((publicId, sortOrder) => ({ publicId, alt: data.title, sortOrder })) } } });
+    revalidateTag('products');
     revalidatePath('/containers');
     revalidatePath('/containers/[slug]', 'page');
     revalidatePath('/sitemap.xml');

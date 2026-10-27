@@ -14,6 +14,8 @@ Requirements: Node.js 20+ and npm.
 
 The storefront has a demo inventory fallback when `DATABASE_URL` is unset, so the UI can be explored without external accounts. Quote requests are validated and return a successful demo acknowledgement in that mode, but are only persisted and emailed when the corresponding database and Resend settings are configured. Admin features require Neon, an `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `NEXTAUTH_SECRET`; the seed script creates/updates that admin using the environment variables.
 
+The active catalog is cached for 60 seconds to reduce database round trips. Admin product changes invalidate the cache immediately; if the database is unavailable, the demo inventory is cached for the same short interval to avoid repeating slow failed queries.
+
 ## Services and environment
 
 - **Neon:** Create a Postgres project. Use the pooled URL for `DATABASE_URL` and the direct URL for Prisma migrations in `DIRECT_URL`.
@@ -31,7 +33,7 @@ For a Vercel production deployment, add these variables to the **Production** en
 - `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, and `MAIL_FROM_EMAIL` for the Hostinger mailbox
 - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
 
-After the schema is available, run `npx prisma db seed` with the intended environment variables to create or update the administrator account and seed the listings from `New containers/`. The 10ft Container 06 image is excluded; 20ft images 01, 06, 07, 10, 11, 12, 13, 15, and 18 are excluded; 40ft Containers 05, 06, and 07 and 53ft Containers 10, 11, and 14 are retired. Feedback photos in `public/local-container-photos/` are assigned to the 10ft Roll Up Doors listing and the four specialized 20ft door listings: Both End Opening Doors ($1,700), All Side Opening Doors ($1,800), Side Double Roll Up Doors ($1,700), and Roll Up Doors ($1,600). Never point inventory replacement commands at production. The administrator can update and delete inquiries from `/admin/inquiries`.
+After the schema is available, run `npx prisma db seed` with the intended environment variables to create or update the administrator account and seed the listings from `New containers/`. The 10ft Container 06 image is excluded; 20ft images 01, 06, 07, 10, 11, 12, 13, 15, and 18 are excluded; 40ft Containers 05, 06, and 07 and 53ft Containers 10, 11, and 14 are retired. Feedback photos are assigned to the 10ft Roll Up Doors listing and the four specialized 20ft door listings: Both End Opening Doors ($1,700), All Side Opening Doors ($1,800), Side Double Roll Up Doors ($1,700), and Roll Up Doors ($1,600). Their feedback-folder photos are stored in Cloudinary under `containers/{slug}/feedback-{number}`. The five listings from `Last Containers/20ft containers/` are included at $1,800 each for open-side models and $1,500 for the modified canteen unit. Never point inventory replacement commands at production. The administrator can update and delete inquiries from `/admin/inquiries`.
 
 ## Useful commands
 
@@ -42,6 +44,14 @@ After the schema is available, run `npx prisma db seed` with the intended enviro
 - `npx prisma db seed` - seed listings from the local container photo set and the optional initial admin
 - `npm run db:replace-inventory` - preview the database target and inventory counts without writing data
 - `npm run db:replace-inventory -- --apply --confirm-target=<DIRECT_URL_HOST>` - replace all products and associated database image records with listings from `New containers/`; requires explicit hostname confirmation and is disabled when `NODE_ENV=production`
+- `npm run db:sync-20ft-listings` - preview every 20ft listing and its matching photos without writing data
+- `npm run db:sync-20ft-listings -- --apply --confirm-target=<DIRECT_URL_HOST>` - upsert every 20ft listing and replace only their image records
+- `npm run db:sync-20ft-listings -- --last-containers --apply --confirm-target=<DIRECT_URL_HOST>` - upsert only the five listings from `Last Containers/20ft containers/`
+- `npm run db:sync-20ft-listings -- --feedback-listings --apply --confirm-target=<DIRECT_URL_HOST>` - sync only the four priced door listings and their feedback photos
+- `npm run db:sync-20ft-listings -- --ten-foot-folder --apply --confirm-target=<DIRECT_URL_HOST>` - sync the 16 listings from `10ft containers/`
+- `npm run db:sync-20ft-listings -- --forty-foot-folder --apply --confirm-target=<DIRECT_URL_HOST>` - sync the 17 unique container photos from `40ft containers/`
+- `npm run db:sync-20ft-listings -- --forty-five-foot-folder --apply --confirm-target=<DIRECT_URL_HOST>` - sync the 22 unique container photos from `45ft containers/`
+- `npm run db:sync-20ft-listings -- --fifty-three-foot-folder --apply --confirm-target=<DIRECT_URL_HOST>` - sync the 15 photos from `53ft container/`
 - `npx prisma studio` - inspect database records
 - `npm run db:cleanup-legacy-images` - preview legacy image records in Neon
 - `npm run db:cleanup-legacy-images -- --apply` - delete only legacy placeholder/Commons image records and matching Cloudinary assets

@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { demoProducts, type CatalogProduct } from '@/lib/demo-data';
 
@@ -72,8 +73,7 @@ export function getDemoProducts(): CatalogProduct[] {
   return assignRepresentativeImages(demoProducts);
 }
 
-export async function getProducts(): Promise<CatalogProduct[]> {
-  if (!process.env.DATABASE_URL) return getDemoProducts();
+const getCachedProducts = unstable_cache(async () => {
   try {
     const products = await prisma.product.findMany({
       where: { status: 'ACTIVE' }, include: { images: { orderBy: { sortOrder: 'asc' } } }, orderBy: { createdAt: 'desc' }
@@ -97,11 +97,23 @@ export async function getProducts(): Promise<CatalogProduct[]> {
       color: product.color ?? '',
       createdAt: product.createdAt
     }));
-    return assignRepresentativeImages(catalog);
+    return assignRepresentativeImages(catalog).map(({ createdAt, ...product }) => ({
+      ...product,
+      createdAt: createdAt.toISOString()
+    }));
   } catch (error) {
     console.error('Catalog database unavailable; using demo inventory.', error instanceof Error ? error.message : error);
     return getDemoProducts();
   }
+}, ['active-container-catalog'], { revalidate: 60, tags: ['products'] });
+
+export async function getProducts(): Promise<CatalogProduct[]> {
+  if (!process.env.DATABASE_URL) return getDemoProducts();
+  const products = await getCachedProducts();
+  return products.map(({ createdAt, ...product }) => ({
+    ...product,
+    createdAt: new Date(createdAt)
+  }));
 }
 
 export async function getProductBySlug(slug: string): Promise<CatalogProduct | undefined> {

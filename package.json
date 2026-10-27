@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:replace-inventory": "tsx scripts/replace-container-inventory.ts",
+    "db:sync-20ft-listings": "tsx scripts/sync-20ft-listings.ts",
     "db:studio": "prisma studio",
     "db:cleanup-legacy-images": "tsx scripts/cleanup-legacy-images.ts"
   },

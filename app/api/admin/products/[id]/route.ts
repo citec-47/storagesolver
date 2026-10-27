@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
@@ -21,6 +21,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     } else {
       await prisma.product.update({ where: { id: params.id }, data: updateFields });
     }
+    revalidateTag('products');
     revalidatePath('/containers');
     revalidatePath('/containers/[slug]', 'page');
     revalidatePath('/sitemap.xml');
@@ -30,6 +31,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   if (!await getServerSession(authOptions)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  try { await prisma.product.delete({ where: { id: params.id } }); revalidatePath('/containers'); revalidatePath('/containers/[slug]', 'page'); revalidatePath('/sitemap.xml'); return NextResponse.json({ success: true }); }
+  try { await prisma.product.delete({ where: { id: params.id } }); revalidateTag('products'); revalidatePath('/containers'); revalidatePath('/containers/[slug]', 'page'); revalidatePath('/sitemap.xml'); return NextResponse.json({ success: true }); }
   catch { return NextResponse.json({ error: 'Could not delete product.' }, { status: 400 }); }
 }

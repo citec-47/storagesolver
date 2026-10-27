@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { ContainerCondition, ContainerSize, ContainerType, Prisma } from '@prisma/client';
+import { ContainerCondition, ContainerSize, ContainerType } from '@prisma/client';
 import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
-import type { CatalogProduct } from '@/lib/demo-data';
-import { assignRepresentativeImages, getDemoProducts, imageCredit, imageUrl } from '@/lib/products';
+import { getProducts, imageCredit, imageUrl } from '@/lib/products';
 
 const querySchema = z.object({
   size: z.nativeEnum(ContainerSize).optional(),
@@ -28,61 +26,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'minPrice must be less than or equal to maxPrice.' }, { status: 400 });
   }
 
-  let products: CatalogProduct[] = getDemoProducts();
-  let usingDemoData = !process.env.DATABASE_URL;
-  if (process.env.DATABASE_URL) {
-    try {
-      const conditionFilters: Prisma.ProductWhereInput[] = [];
-      if (filters.condition) conditionFilters.push({ condition: filters.condition });
-      if (filters.availability === 'new') conditionFilters.push({ condition: { in: [ContainerCondition.NEW, ContainerCondition.ONE_TRIP] } });
-      if (filters.availability === 'used') conditionFilters.push({ condition: { in: [ContainerCondition.CARGO_WORTHY, ContainerCondition.WIND_WATER_TIGHT, ContainerCondition.AS_IS] } });
-      const where: Prisma.ProductWhereInput = {
-        status: 'ACTIVE',
-        ...(filters.size ? { size: filters.size } : {}),
-        ...(filters.type ? { type: filters.type } : {}),
-        ...(conditionFilters.length ? { AND: conditionFilters } : {}),
-        ...(filters.location ? { location: { contains: filters.location, mode: 'insensitive' } } : {}),
-        ...(filters.q ? { OR: [{ title: { contains: filters.q, mode: 'insensitive' } }, { description: { contains: filters.q, mode: 'insensitive' } }, { location: { contains: filters.q, mode: 'insensitive' } }] } : {}),
-      };
-      const records = await prisma.product.findMany({ where, include: { images: { orderBy: { sortOrder: 'asc' } } }, orderBy: { createdAt: 'desc' } });
-      products = assignRepresentativeImages(records.map((product) => ({
-        ...product,
-        grade: product.grade ?? '',
-        price: Number(product.price),
-        salePrice: undefined,
-        internalLength: product.internalLength ?? '', internalWidth: product.internalWidth ?? '', internalHeight: product.internalHeight ?? '',
-        externalLength: product.externalLength ?? '', externalWidth: product.externalWidth ?? '', externalHeight: product.externalHeight ?? '',
-        doorOpeningWidth: product.doorOpeningWidth ?? '', doorOpeningHeight: product.doorOpeningHeight ?? '',
-        tareWeight: product.tareWeight ?? '', maxPayload: product.maxPayload ?? '', cubicCapacity: product.cubicCapacity ?? '', color: product.color ?? ''
-      })));
-    } catch (error) {
-      console.error('Inventory API database query failed.', error instanceof Error ? error.message : 'unknown error');
-      usingDemoData = true;
-    }
-  }
-
-  if (usingDemoData) {
-    products = products.filter((product) =>
-      (!filters.size || product.size === filters.size) &&
-      (!filters.type || product.type === filters.type) &&
-      (!filters.condition || product.condition === filters.condition) &&
-      (filters.availability === 'all' || (filters.availability === 'new' ? ['NEW', 'ONE_TRIP'].includes(product.condition) : ['CARGO_WORTHY', 'WIND_WATER_TIGHT', 'AS_IS'].includes(product.condition))) &&
-      (!filters.location || product.location.toLowerCase().includes(filters.location.toLowerCase())) &&
-      (!filters.q || `${product.title} ${product.description} ${product.location}`.toLowerCase().includes(filters.q.toLowerCase())) &&
-      (filters.minPrice === undefined || product.price >= filters.minPrice) &&
-      (filters.maxPrice === undefined || product.price <= filters.maxPrice)
-    );
-    if (filters.sort === 'price-asc') products.sort((a, b) => a.price - b.price);
-    if (filters.sort === 'price-desc') products.sort((a, b) => b.price - a.price);
-    if (filters.sort === 'newest') products.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  } else {
-    products = products.filter((product) =>
-      (filters.minPrice === undefined || product.price >= filters.minPrice) &&
-      (filters.maxPrice === undefined || product.price <= filters.maxPrice)
-    );
-    if (filters.sort === 'price-asc') products.sort((a, b) => a.price - b.price);
-    if (filters.sort === 'price-desc') products.sort((a, b) => b.price - a.price);
-  }
+  const products = (await getProducts()).filter((product) =>
+    (!filters.size || product.size === filters.size) &&
+    (!filters.type || product.type === filters.type) &&
+    (!filters.condition || product.condition === filters.condition) &&
+    (filters.availability === 'all' || (filters.availability === 'new'
+      ? product.condition === ContainerCondition.NEW || product.condition === ContainerCondition.ONE_TRIP
+      : product.condition === ContainerCondition.CARGO_WORTHY || product.condition === ContainerCondition.WIND_WATER_TIGHT || product.condition === ContainerCondition.AS_IS)) &&
+    (!filters.location || product.location.toLowerCase().includes(filters.location.toLowerCase())) &&
+    (!filters.q || `${product.title} ${product.description} ${product.location}`.toLowerCase().includes(filters.q.toLowerCase())) &&
+    (filters.minPrice === undefined || product.price >= filters.minPrice) &&
+    (filters.maxPrice === undefined || product.price <= filters.maxPrice)
+  );
+  if (filters.sort === 'price-asc') products.sort((a, b) => a.price - b.price);
+  if (filters.sort === 'price-desc') products.sort((a, b) => b.price - a.price);
+  if (filters.sort === 'newest') products.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   const total = products.length;
   const offset = (filters.page - 1) * filters.limit;
