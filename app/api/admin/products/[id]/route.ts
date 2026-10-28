@@ -32,5 +32,5 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   if (!await getServerSession(authOptions)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try { await prisma.product.delete({ where: { id: params.id } }); revalidateTag('products'); revalidatePath('/containers'); revalidatePath('/containers/[slug]', 'page'); revalidatePath('/sitemap.xml'); return NextResponse.json({ success: true }); }
-  catch { return NextResponse.json({ error: 'Could not delete product.' }, { status: 400 }); }
+  catch (error) { console.error('Could not delete product.', error); return NextResponse.json({ error: 'Could not delete product.' }, { status: 400 }); }
 }
